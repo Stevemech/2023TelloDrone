@@ -1,0 +1,3 @@
+cidlist = []
+
+            return cidlist, cidxlist
