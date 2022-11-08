@@ -20,9 +20,9 @@ import math
 # wid3 = input("Enter wanted id3:")
 
 wid1 = 2
-wid2 = 27
+wid2 = 10
 wid3 = 19
-targetList = [2, 27, 19]
+targetList = [2, 10, 19]
 
 cidlist = []
 cidxlist = []

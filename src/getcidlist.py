@@ -1,3 +1,0 @@
-cidlist = []
-
-            return cidlist, cidxlist
