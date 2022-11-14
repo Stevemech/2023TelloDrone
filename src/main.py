@@ -10,6 +10,9 @@ import numpy as np
 import itertools
 import math
 
+#-- test results
+# 11 9 18 - results: 5, 4, 9, 5
+# 6 9 14
 #-- User input for three numbers
 
 userIDS = input("Enter wanted ids separated by a space: ")
@@ -29,12 +32,13 @@ cidxlist = []
 count = 0
 detected = False
 
+
 #-- Define the camera feed resolution
 w = 360
 d = 240
 
 #--
-check_timer = 60
+check_timer = 30
 
 #--
 kpm.init()
@@ -98,7 +102,8 @@ def trackARuCOXY(centerX, centerY, lengthX, lengthY):
     x_delta = centerX - w/2
     y_delta = centerY - d/3
 
-    print("lengthX, lengthY, area pixel", lengthX, lengthY, lengthX * lengthY)
+
+    print("lengthX, lengthY, area pixel, x_delta, y_delta", lengthX, lengthY, lengthX * lengthY, x_delta, y_delta)
     #-- Gauge to determine when the drone is close enough to the ArUco marker
     #-- Takes the lengthX and lengthY of the detected ArUco marker and calculates area
     if (lengthX * lengthY < int((w*d)/32)):
@@ -107,36 +112,55 @@ def trackARuCOXY(centerX, centerY, lengthX, lengthY):
         # -- If the drone is not close enough, the drone will realign
         # -- using the centers of the detected ArUco marker and
         # -- the video feed and continue moving forward
-        if (abs(x_delta) > lengthX/2 and abs(y_delta) > lengthY/2):
-            drone.go_xyz_speed(40, int(x_delta/lengthX * (-10)), int(y_delta/lengthY * (-10)), 30)
-        elif (abs(y_delta) <= lengthY/2):
-            drone.go_xyz_speed(40, int(x_delta/lengthX * (-10)), 0, 30)
-        elif (abs(x_delta) <= lengthX/2):
-            drone.go_xyz_speed(40, 0, int(y_delta/lengthY * (-10)), 30)
-    else:
+        if (abs(x_delta) > lengthX/4 and abs(y_delta) > lengthY/4):
+            drone.go_xyz_speed(40, int(x_delta/lengthX * (-10)), int(y_delta/lengthY * (-10))+5, 40)
+            sleep(0.5)
+        elif (abs(y_delta) <= lengthY/4):
+            drone.go_xyz_speed(40, int(x_delta/lengthX * (-10)), 5, 40)
+            sleep(0.5)
+        elif (abs(x_delta) <= lengthX/4):
+            drone.go_xyz_speed(40, 0, int(y_delta/lengthY * (-10))+5, 40)
+            sleep(0.5)
         #-- If the drone is close enough, the drone will move forward to pop the balloon
         #-- and move backwards,  looking for the next ArUco marker
-        drone.go_xyz_speed(40, 0, 0, 80)
-        drone.move_back(200)
+    else:
+        print("distance: ", drone.get_distance_tof())
+        if (lengthX * lengthY < 7500):
+            print("ready to poke")
+            print("flight time: ", drone.get_flight_time())
+            drone.go_xyz_speed(50, 0, 0, 80)
+            detected = True
+        # move back 100cm
+        drone.go_xyz_speed(-120, 0, 0, 80)
+
+
 
 #-- Drone takes off
 drone.takeoff()
-drone.move_up(40)
-drone.move_forward(30)
+sleep(2)
+drone.go_xyz_speed(0, 0, 100, 100)
 sleep(1)
+drone.go_xyz_speed(150, 0, 0, 100)
+sleep(1)
+print("flight time: ", drone.get_flight_time())
 
 while True:
 
     #-- Initialize all variables for every new frame
     cidlist = []
     cidxlist = []
-    tvec = []
-    rvec = []
+#    tvec = []
+#    rvec = []
     x_center = 0
     y_center = 0
     x_length = 0
     y_length = 0
     check_timer -= 1
+    LM_tag00 = []
+    LM_tag01 = []
+    LM_tag10 = []
+    LM_tag11 = []
+
 
     #-- Check for keyboard input
     #-- This is a debugging feature and is not used for autonomous driving
@@ -154,6 +178,8 @@ while True:
         gray_frame, marker_dict, parameters=param_markers
     )
     if marker_IDs is not None:
+        #-- last less than 3 back off found the marker, reset the back off step to 0
+        count = 0
         #-- Draw detected ArUco markers on the video feed
         img_aruco = aruco.drawDetectedMarkers(frame, marker_corners, marker_IDs, (0, 255, 0))
 
@@ -161,35 +187,54 @@ while True:
         for ids1, marker_corners1 in zip(marker_IDs, marker_corners):
             print(ids1, " ", marker_corners1.astype(np.int32))
             if ids1[0] in targetList:
-                detected = True
                 cidlist.append(ids1[0])
-                count = len(cidlist)
                 cidxlist.append(marker_corners1[0])
+                if len(LM_tag00) != 0:
+                    if marker_corners1[0][0][0] < LM_tag00[0]:
+                        LM_tag00 = marker_corners1[0][0]
+                        LM_tag01 = marker_corners1[0][1]
+                        LM_tag10 = marker_corners1[0][2]
+                        LM_tag11 = marker_corners1[0][3]
+                else:
+                    LM_tag00 = marker_corners1[0][0]
+                    LM_tag01 = marker_corners1[0][1]
+                    LM_tag10 = marker_corners1[0][2]
+                    LM_tag11 = marker_corners1[0][3]
         print("cidlist:", cidlist)
         print("cidxlist: ", cidxlist)
+        print("lM_tag00, LM_tag01, LM_tag10, LM_tag11 ", LM_tag00, LM_tag01, LM_tag10, LM_tag11)
         #-- Post estimation of the ArUco marker's position
         #-- Note: This is currently only used to find the xyz coordinates of the ArUco marker
         #-- In the future, this will be utilized for more sophisticated ArUco marker navigation
         #-- tvec is the center of the marker in the camera's world
-        rvec, tvec,  _ = aruco.estimatePoseSingleMarkers(cidxlist, marker_length, camera_matrix,
-                                                        distortion_coefficients)
+ #       rvec, tvec,  _ = aruco.estimatePoseSingleMarkers(cidxlist, marker_length, camera_matrix,
+#                                                         distortion_coefficients)
 
-        print("tvec ", tvec)
-        print("rvec ", rvec)
-        if rvec is not None and tvec is not None:
-            # In case there are multiple markers
-            #           for i in range(len(cidlist)):
-            img_aruco = cv.drawFrameAxes(img_aruco, camera_matrix, distortion_coefficients, rvec[0][0], tvec[0][0],
-                                         marker_length, 3)
+ #       print("tvec ", tvec)
+ #       print("rvec ", rvec)
+ #       if rvec is not None and tvec is not None:
+ #           # In case there are multiple markers
+ #           #           for i in range(len(cidlist)):
+ #           img_aruco = cv.drawFrameAxes(img_aruco, camera_matrix, distortion_coefficients, rvec[0][0], tvec[0][0],
+ #                                        marker_length, 3)
 
         #-- Use the corners of the ArUco markers to calculate the center and lengths of the ArUco marker
         #-- This always picks the first ArUco marker in the list
-        if len(cidxlist) != 0:
-            x_center = (cidxlist[0][0][0] + cidxlist[0][1][0] + cidxlist[0][2][0] + cidxlist[0][3][0]) / 4
-            y_center = (cidxlist[0][0][1] + cidxlist[0][1][1] + cidxlist[0][2][1] + cidxlist[0][3][1]) / 4
+#        if len(cidxlist) != 0:
+#            x_center = (cidxlist[0][0][0] + cidxlist[0][1][0] + cidxlist[0][2][0] + cidxlist[0][3][0]) / 4
+#            y_center = (cidxlist[0][0][1] + cidxlist[0][1][1] + cidxlist[0][2][1] + cidxlist[0][3][1]) / 4
+#            print("x_center, y_center ", x_center, y_center)
+#            x_length = cidxlist[0][1][0] - cidxlist[0][0][0]
+#            y_length = cidxlist[0][2][1] - cidxlist[0][1][1]
+#            x_length = max(cidxlist[0][0][0], cidxlist[0][1][0], cidxlist[0][2][0], cidxlist[0][3][0]) - min(cidxlist[0][0][0], cidxlist[0][1][0], cidxlist[0][2][0], cidxlist[0][3][0])
+#            y_length = max(cidxlist[0][0][1], cidxlist[0][1][1], cidxlist[0][2][1], cidxlist[0][3][1]) - min(cidxlist[0][0][1], cidxlist[0][1][1], cidxlist[0][2][1], cidxlist[0][3][1])
+        if len(LM_tag00) != 0:
+            x_center = (LM_tag00[0] + LM_tag01[0] + LM_tag10[0] + LM_tag11[0]) / 4
+            y_center = (LM_tag00[1] + LM_tag01[1] + LM_tag10[1] + LM_tag11[1]) / 4
             print("x_center, y_center ", x_center, y_center)
-            x_length = max(cidxlist[0][0][0], cidxlist[0][1][0], cidxlist[0][2][0], cidxlist[0][3][0]) - min(cidxlist[0][0][0], cidxlist[0][1][0], cidxlist[0][2][0], cidxlist[0][3][0])
-            y_length = max(cidxlist[0][0][1], cidxlist[0][1][1], cidxlist[0][2][1], cidxlist[0][3][1]) - min(cidxlist[0][0][1], cidxlist[0][1][1], cidxlist[0][2][1], cidxlist[0][3][1])
+            x_length = LM_tag01[0] - LM_tag00[0]
+            y_length = LM_tag10[1] - LM_tag01[1]
+
             print("x_length, y_length ", x_length, y_length)
             #-- Navigate the drone using the ArUco marker's center and length
             #-- Tries to align the center of the camera feed to the center of the ArUco marker
@@ -198,28 +243,44 @@ while True:
             #-- If no ArUco markers are detected, the drone will do something to try to find
             #-- the ArUco marker from a different position
             if check_timer == 0:
-                check_timer = 60
-                if count < 5:
-                    drone.move_back(20)
+                check_timer = 30
+                if count < 2:
+                    #drone.move_back(20)
+                    drone.go_xyz_speed(-60, 0, 0, 60)
                     count += 1
                     sleep(0.5)
                 else:
                     count = 0
-                    drone.move_forward(40)
+                    #drone.move_forward(40)
+                    print("Height: ", drone.get_height())
+                    if drone.get_height() > 200:
+                        drone.go_xyz_speed(40, 0, -20, 40)
+                    else:
+                        drone.go_xyz_speed(40, 0, 20, 40)
                     sleep(0.5)
 
 ## YOU ARE ENTERING THE CONSTRUCTION ZONE ##
     else:
         #-- Work in progress...
         if check_timer == 0:
-            check_timer = 60
-            if count < 5:
-                drone.move_back(20)
+            check_timer = 30
+            if count < 2:
+                # drone.move_back(20)
+                drone.go_xyz_speed(-60, 0, 0, 60)
                 count += 1
                 sleep(0.5)
+            elif detected is True:
+                # drone.move_back(60)
+                drone.go_xyz_speed(-60, 0, 0, 60)
+                detected = False
             else:
                 count = 0
-                drone.move_forward(40)
+                # drone.move_forward(40)
+                print("Height: ", drone.get_height())
+                if drone.get_height() > 200:
+                    drone.go_xyz_speed(40, 0, -20, 40)
+                else:
+                    drone.go_xyz_speed(40, 0, 20, 40)
                 sleep(0.5)
     print("check_timer, count:", check_timer, count)
     ## END OF CONSTRUCTION ZONE ##
