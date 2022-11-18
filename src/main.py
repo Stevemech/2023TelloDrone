@@ -104,6 +104,11 @@ def trackARuCOXY(centerX, centerY, lengthX, lengthY, totalbals):
     x_delta = centerX - w/2
     y_delta = centerY - d/3
 
+
+    if (lengthX >=40):
+        steplength = 30
+    else:
+        steplength = 40
     print("lengthX, lengthY, area pixel, x_delta, y_delta", lengthX, lengthY, lengthX * lengthY, x_delta, y_delta)
     #-- Gauge to determine when the drone is close enough to the ArUco marker
     #-- Takes the lengthX and lengthY of the detected ArUco marker and calculates area
@@ -114,13 +119,13 @@ def trackARuCOXY(centerX, centerY, lengthX, lengthY, totalbals):
         # -- using the centers of the detected ArUco marker and
         # -- the video feed and continue moving forward
         if (abs(x_delta) > lengthX/6 and abs(y_delta) > lengthY/4):
-            drone.go_xyz_speed(40, int(x_delta/lengthX * (-10)), int(y_delta/lengthY * (-10))+5, 40)
-            sleep(0.5)
+                drone.go_xyz_speed(steplength, int(x_delta/lengthX * (-10)), int(y_delta/lengthY * (-10))+5, 40)
+                sleep(0.5)
         elif (abs(y_delta) <= lengthY/4):
-            drone.go_xyz_speed(40, int(x_delta/lengthX * (-10)), 5, 40)
+            drone.go_xyz_speed(steplength, int(x_delta/lengthX * (-10)), 5, 40)
             sleep(0.5)
         elif (abs(x_delta) <= lengthX/6):
-            drone.go_xyz_speed(40, 0, int(y_delta/lengthY * (-10))+5, 40)
+            drone.go_xyz_speed(steplength, 0, int(y_delta/lengthY * (-10))+5, 40)
             sleep(0.5)
         #-- If the drone is close enough, the drone will move forward to pop the balloon
         #-- and move backwards,  looking for the next ArUco marker
@@ -130,7 +135,7 @@ def trackARuCOXY(centerX, centerY, lengthX, lengthY, totalbals):
             totalbals -= 1
             print("ready to poke")
             print("flight time: ", drone.get_flight_time())
-            drone.go_xyz_speed(48, 0, 0, 100)
+            drone.go_xyz_speed(45, 0, 0, 100)
             detected = True
         # move back 100cm
         drone.go_xyz_speed(-117, 0, 0, 80)
