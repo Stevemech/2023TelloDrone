@@ -23,14 +23,14 @@ def fly_circle(tello, radius_cm):
 
     # Calculate the distance to move in each segment
     segment_length = circumference / num_segments
-    print("segment_length")
+    print("segment_length", int(segment_length))
     # Calculate the angle to turn in each segment
     angle = 360 / num_segments
+    print("angle", int(angle))
 
     for _ in range(num_segments):
-        print("coming into loop")
-        tello.move_forward(segment_length)
-        tello.rotate_clockwise(angle)
+        tello.move_forward(int(segment_length))
+        tello.rotate_clockwise(int(angle))
         time.sleep(2)
 
 
