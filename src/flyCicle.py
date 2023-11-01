@@ -19,10 +19,11 @@ def fly_circle(tello, radius_cm):
     circumference = 2 * math.pi * radius_cm
     print("circumference")
     # Calculate the number of segments to approximate the circle
-    num_segments = 36  # You can adjust this value for smoother circles
-
+  #  num_segments = 36  # You can adjust this value for smoother circles
+    num_segments =18
     # Calculate the distance to move in each segment
-    segment_length = circumference / num_segments
+ #   segment_length = circumference / num_segments
+    segment_length =20
     print("segment_length", int(segment_length))
     # Calculate the angle to turn in each segment
     angle = 360 / num_segments
