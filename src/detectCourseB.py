@@ -64,10 +64,7 @@ try:
     find_balloon(tello)
     print(color_dict)
 
-    # Setting the Resolvaton
-
 except Exception as e:
     print("")
-    #print(f"Error: {e}")
 finally:
     tello.end()
