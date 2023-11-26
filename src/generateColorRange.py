@@ -1,7 +1,7 @@
 import cv2 
 import numpy as np
   
-cap = cv2.imread('purplecolor.png')
+cap = cv2.imread('yellow.png')
 upper_r, upper_g, upper_b = 0, 0, 0
 lower_r, lower_g, lower_b = 180, 180, 180
 #You're free to do a resize or not, just for the example
